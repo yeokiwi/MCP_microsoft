@@ -57,30 +57,55 @@ Lists all Office files and PDFs in a given directory.
 - `recursive` — Scan subdirectories (default: `false`)
 - `file_types` — Types to include: `["docx", "pptx", "xlsx", "pdf"]`
 
+## Prerequisites
+
+- **Node.js** 18 or higher — [nodejs.org](https://nodejs.org)
+- **npm** 8 or higher (bundled with Node.js)
+- **Python 3** + **pdfplumber** — only required for PDF table extraction
+
+Check your versions:
+```bash
+node --version   # must be >= 18
+npm --version
+python3 --version
+```
+
 ## Installation
 
 ```bash
+# 1. Navigate into the project directory
+cd mcp-office-reader
+
+# 2. Install Node.js dependencies
 npm install
+
+# 3. Build TypeScript to JavaScript
 npm run build
 ```
 
-### Python dependency (for PDF table extraction)
+### Optional: PDF table extraction
+
+If you want `read_pdf` to extract tables, install the Python dependency:
 ```bash
 pip install pdfplumber
+# or, on some systems:
+pip3 install pdfplumber
 ```
 
-## Usage
+## Running the Server
 
-### Development
+### Development (with hot reload)
 ```bash
 npm run dev
 ```
 
 ### Production
 ```bash
-npm run build
-npm start
+npm run build   # compile TypeScript (skip if already built)
+npm start       # runs dist/index.js
 ```
+
+The server communicates over **stdio** — connect it via an MCP-compatible client (Claude Desktop, Cursor, etc.).
 
 ## Claude Desktop Integration
 

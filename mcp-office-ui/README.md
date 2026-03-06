@@ -27,44 +27,81 @@ Office Tool Executor
     └── pdfplumber    (.pdf tables via Python)
 ```
 
+## Prerequisites
+
+- **Node.js** 18 or higher — [nodejs.org](https://nodejs.org)
+- **npm** 8 or higher (bundled with Node.js)
+- **DeepSeek API key** — [platform.deepseek.com](https://platform.deepseek.com)
+- **Python 3** + **pdfplumber** — only required for PDF table extraction
+
+Check your versions:
+```bash
+node --version   # must be >= 18
+npm --version
+python3 --version
+```
+
 ## Quick Start
 
-### 1. Configure DeepSeek API key
+All commands below assume you are inside the `mcp-office-ui/` directory.
+
+### 1. Configure the DeepSeek API key
 
 ```bash
 cp backend/.env.example backend/.env
-# Edit backend/.env and set your DEEPSEEK_API_KEY
 ```
 
-Get a key at https://platform.deepseek.com
+Open `backend/.env` and set your key:
+```
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+PORT=3001
+```
 
 ### 2. Install dependencies
 
 ```bash
-cd backend && npm install
-cd ../frontend && npm install
-```
-
-### 3. Start backend
-
-```bash
+# Install backend dependencies
 cd backend
-npm run dev        # development (tsx watch)
-# or
-npm run build && npm start   # production
+npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
 ```
 
-### 4. Start frontend
+### 3. Start the backend
+
+Open a terminal in `mcp-office-ui/backend/` and run:
 
 ```bash
-cd frontend
-npm run dev        # http://localhost:5173
+# Development — auto-restarts on file changes
+npm run dev
+
+# Production
+npm run build
+npm start
 ```
+
+The backend listens on **http://localhost:3001** by default.
+
+### 4. Start the frontend
+
+Open a second terminal in `mcp-office-ui/frontend/` and run:
+
+```bash
+npm run dev
+```
+
+Open **http://localhost:5173** in your browser.
+
+> **Note:** The frontend dev server proxies all `/api/*` requests to `localhost:3001`, so both servers must be running.
 
 ### Optional: PDF table extraction
 
 ```bash
 pip install pdfplumber
+# or, on some systems:
+pip3 install pdfplumber
 ```
 
 ## Features
