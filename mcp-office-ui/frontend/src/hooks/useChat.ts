@@ -7,7 +7,7 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function useChat() {
+export function useChat(model: string) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: uid(),
@@ -43,7 +43,7 @@ export function useChat() {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: historyMessages }),
+        body: JSON.stringify({ messages: historyMessages, model }),
         signal: ctrl.signal,
       });
 

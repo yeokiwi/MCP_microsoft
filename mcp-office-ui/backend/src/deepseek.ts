@@ -8,7 +8,13 @@ import {
   listOfficeFiles,
 } from "./tools/executor.js";
 
-export function createDeepSeekClient(): OpenAI {
+function createLLMClient(model: string): OpenAI {
+  if (model.startsWith("mistral") || model.startsWith("open-mistral") || model.startsWith("open-mixtral")) {
+    const apiKey = process.env.MISTRAL_API_KEY;
+    if (!apiKey) throw new Error("MISTRAL_API_KEY environment variable is not set");
+    return new OpenAI({ apiKey, baseURL: "https://api.mistral.ai/v1" });
+  }
+  // Default: DeepSeek
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error("DEEPSEEK_API_KEY environment variable is not set");
   return new OpenAI({ apiKey, baseURL: "https://api.deepseek.com" });
@@ -140,13 +146,14 @@ export interface StreamEvent {
   error?: string;
 }
 
-// Chat with DeepSeek using tool calling, streaming events via callback
-export async function chatWithDeepSeek(
+// Chat with the selected LLM using tool calling, streaming events via callback.
+// Supports DeepSeek (deepseek-*) and Mistral (mistral-*, open-mistral-*, open-mixtral-*).
+export async function chatWithLLM(
   messages: ChatCompletionMessageParam[],
   onEvent: (event: StreamEvent) => void,
   model = "deepseek-chat"
 ): Promise<void> {
-  const client = createDeepSeekClient();
+  const client = createLLMClient(model);
   const conversationMessages: ChatCompletionMessageParam[] = [...messages];
 
   // Agentic loop: keep running until model produces a final text response
@@ -231,3 +238,6 @@ export async function chatWithDeepSeek(
     // Continue loop to get next model response
   }
 }
+
+// Keep the old name as an alias for backwards compatibility
+export const chatWithDeepSeek = chatWithLLM;

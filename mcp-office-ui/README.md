@@ -1,12 +1,12 @@
-# MCP Office UI — DeepSeek Chat Interface
+# MCP Office UI — Multi-LLM Chat Interface
 
-A full-stack web application that integrates the **MCP Office Reader** tools with **DeepSeek LLM**, providing a chat interface for reading and analysing Office files and PDFs.
+A full-stack web application that integrates the **MCP Office Reader** tools with your choice of **DeepSeek** or **Mistral** LLM, providing a chat interface for reading and analysing Office files and PDFs.
 
 ## Architecture
 
 ```
 mcp-office-ui/
-├── backend/         Express API server — DeepSeek integration + tool execution
+├── backend/         Express API server — LLM integration + tool execution
 └── frontend/        React + Vite chat UI
 ```
 
@@ -16,6 +16,7 @@ Browser (React)
     ▼
 Express Backend (port 3001)
     │  OpenAI-compatible API  ──→  DeepSeek LLM
+    │                         ──→  Mistral LLM
     │  Tool calls
     ▼
 Office Tool Executor
@@ -27,11 +28,26 @@ Office Tool Executor
     └── pdfplumber    (.pdf tables via Python)
 ```
 
+## Supported Models
+
+| Provider | Model ID | Notes |
+|----------|----------|-------|
+| DeepSeek | `deepseek-chat` | Default |
+| DeepSeek | `deepseek-reasoner` | DeepSeek-R1, strong reasoning |
+| Mistral | `mistral-small-latest` | Fast, cost-effective |
+| Mistral | `mistral-large-latest` | Most capable Mistral model |
+| Mistral | `open-mistral-7b` | Open-weight, lightweight |
+| Mistral | `open-mixtral-8x7b` | Open-weight MoE model |
+
+Switch between models at any time using the dropdown in the top bar.
+
 ## Prerequisites
 
 - **Node.js** 18 or higher — [nodejs.org](https://nodejs.org)
 - **npm** 8 or higher (bundled with Node.js)
-- **DeepSeek API key** — [platform.deepseek.com](https://platform.deepseek.com)
+- **API key** for at least one provider:
+  - DeepSeek — [platform.deepseek.com](https://platform.deepseek.com)
+  - Mistral — [console.mistral.ai](https://console.mistral.ai)
 - **Python 3** + **pdfplumber** — only required for PDF table extraction
 
 Check your versions:
@@ -45,17 +61,20 @@ python3 --version
 
 All commands below assume you are inside the `mcp-office-ui/` directory.
 
-### 1. Configure the DeepSeek API key
+### 1. Configure API keys
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Open `backend/.env` and set your key:
+Open `backend/.env` and set the key(s) for the provider(s) you want to use:
 ```
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
+MISTRAL_API_KEY=your_mistral_api_key_here
 PORT=3001
 ```
+
+You only need to set the key for the provider you intend to use. The backend will throw a clear error if you select a model whose API key is missing.
 
 ### 2. Install dependencies
 
@@ -106,8 +125,9 @@ pip3 install pdfplumber
 
 ## Features
 
-- **Chat with DeepSeek** about any Office file or PDF
-- **Agentic tool use** — DeepSeek automatically calls the right tool based on your question
+- **Multi-LLM support** — switch between DeepSeek and Mistral models from the top bar
+- **Chat with any supported model** about any Office file or PDF
+- **Agentic tool use** — the model automatically calls the right tool based on your question
 - **Streaming responses** via Server-Sent Events
 - **File browser sidebar** — scan directories for Office files and click to analyse
 - **Tool call inspector** — expandable cards show what tools were called and the raw results
@@ -122,11 +142,21 @@ pip3 install pdfplumber
 | GET | `/api/files?directory=&recursive=` | List Office files in a directory |
 | GET | `/api/health` | Health check |
 
+The `/api/chat` request body accepts:
+```json
+{
+  "messages": [...],
+  "model": "mistral-large-latest"
+}
+```
+
+If `model` is omitted, it defaults to `deepseek-chat`.
+
 ## Tech Stack
 
 | Layer | Tech |
 |-------|------|
-| LLM | DeepSeek (OpenAI-compatible API) |
+| LLM | DeepSeek / Mistral (OpenAI-compatible APIs) |
 | Backend | Express + TypeScript |
 | Frontend | React 18 + Vite + TypeScript |
 | Streaming | Server-Sent Events (SSE) |

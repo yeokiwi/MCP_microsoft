@@ -529,6 +529,19 @@ body {
 }
 .btn-ghost:hover { background: var(--bg-3); color: var(--text); }
 
+.model-selector {
+  background: var(--bg-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+}
+.model-selector:focus { border-color: var(--accent); }
+.model-selector:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .btn-stop {
   background: rgba(239,68,68,0.15);
   color: var(--error);

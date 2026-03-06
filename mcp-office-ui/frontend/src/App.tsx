@@ -3,12 +3,24 @@ import { useChat } from "./hooks/useChat.js";
 import { MessageBubble } from "./components/MessageBubble.js";
 import { Sidebar } from "./components/Sidebar.js";
 
+const MODELS = [
+  { value: "deepseek-chat", label: "DeepSeek Chat", provider: "DeepSeek" },
+  { value: "deepseek-reasoner", label: "DeepSeek Reasoner", provider: "DeepSeek" },
+  { value: "mistral-small-latest", label: "Mistral Small", provider: "Mistral" },
+  { value: "mistral-large-latest", label: "Mistral Large", provider: "Mistral" },
+  { value: "open-mistral-7b", label: "Mistral 7B (open)", provider: "Mistral" },
+  { value: "open-mixtral-8x7b", label: "Mixtral 8x7B (open)", provider: "Mistral" },
+];
+
 export default function App() {
-  const { messages, isLoading, sendMessage, stopGeneration, clearChat } = useChat();
+  const [selectedModel, setSelectedModel] = useState(MODELS[0].value);
+  const { messages, isLoading, sendMessage, stopGeneration, clearChat } = useChat(selectedModel);
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const currentModel = MODELS.find((m) => m.value === selectedModel) ?? MODELS[0];
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -61,10 +73,28 @@ export default function App() {
           <h1 className="app-title">
             <span className="app-logo">📄</span>
             MCP Office Reader
-            <span className="app-subtitle">powered by DeepSeek</span>
+            <span className="app-subtitle">powered by {currentModel.provider}</span>
           </h1>
         </div>
         <div className="topbar-right">
+          <select
+            className="model-selector"
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isLoading}
+            title="Select LLM model"
+          >
+            <optgroup label="DeepSeek">
+              {MODELS.filter((m) => m.provider === "DeepSeek").map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Mistral">
+              {MODELS.filter((m) => m.provider === "Mistral").map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </optgroup>
+          </select>
           <button className="btn btn-ghost" onClick={clearChat} title="Clear chat">
             🗑 Clear
           </button>
@@ -133,7 +163,7 @@ export default function App() {
               </div>
             </div>
             <p className="input-hint">
-              DeepSeek will automatically read and analyse Office files when you share a file path.
+              {currentModel.label} will automatically read and analyse Office files when you share a file path.
             </p>
           </div>
         </main>
