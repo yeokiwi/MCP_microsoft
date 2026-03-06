@@ -14,6 +14,11 @@ function createLLMClient(model: string): OpenAI {
     if (!apiKey) throw new Error("MISTRAL_API_KEY environment variable is not set");
     return new OpenAI({ apiKey, baseURL: "https://api.mistral.ai/v1" });
   }
+  if (model.startsWith("glm-")) {
+    const apiKey = process.env.GLM_API_KEY;
+    if (!apiKey) throw new Error("GLM_API_KEY environment variable is not set");
+    return new OpenAI({ apiKey, baseURL: "https://open.bigmodel.cn/api/paas/v4" });
+  }
   // Default: DeepSeek
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error("DEEPSEEK_API_KEY environment variable is not set");

@@ -10,6 +10,9 @@ const MODELS = [
   { value: "mistral-large-latest", label: "Mistral Large", provider: "Mistral" },
   { value: "open-mistral-7b", label: "Mistral 7B (open)", provider: "Mistral" },
   { value: "open-mixtral-8x7b", label: "Mixtral 8x7B (open)", provider: "Mistral" },
+  { value: "glm-4", label: "GLM-4", provider: "GLM" },
+  { value: "glm-4-flash", label: "GLM-4 Flash", provider: "GLM" },
+  { value: "glm-4-air", label: "GLM-4 Air", provider: "GLM" },
 ];
 
 export default function App() {
@@ -91,6 +94,11 @@ export default function App() {
             </optgroup>
             <optgroup label="Mistral">
               {MODELS.filter((m) => m.provider === "Mistral").map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </optgroup>
+            <optgroup label="GLM (Zhipu AI)">
+              {MODELS.filter((m) => m.provider === "GLM").map((m) => (
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </optgroup>

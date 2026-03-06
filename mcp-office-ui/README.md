@@ -1,6 +1,6 @@
 # MCP Office UI — Multi-LLM Chat Interface
 
-A full-stack web application that integrates the **MCP Office Reader** tools with your choice of **DeepSeek** or **Mistral** LLM, providing a chat interface for reading and analysing Office files and PDFs.
+A full-stack web application that integrates the **MCP Office Reader** tools with your choice of **DeepSeek**, **Mistral**, or **GLM** LLM, providing a chat interface for reading and analysing Office files and PDFs.
 
 ## Architecture
 
@@ -38,6 +38,9 @@ Office Tool Executor
 | Mistral | `mistral-large-latest` | Most capable Mistral model |
 | Mistral | `open-mistral-7b` | Open-weight, lightweight |
 | Mistral | `open-mixtral-8x7b` | Open-weight MoE model |
+| GLM | `glm-4` | Zhipu AI flagship model |
+| GLM | `glm-4-flash` | Fast, low-latency variant |
+| GLM | `glm-4-air` | Lightweight, cost-effective |
 
 Switch between models at any time using the dropdown in the top bar.
 
@@ -48,6 +51,7 @@ Switch between models at any time using the dropdown in the top bar.
 - **API key** for at least one provider:
   - DeepSeek — [platform.deepseek.com](https://platform.deepseek.com)
   - Mistral — [console.mistral.ai](https://console.mistral.ai)
+  - GLM (Zhipu AI) — [open.bigmodel.cn](https://open.bigmodel.cn)
 - **Python 3** + **pdfplumber** — only required for PDF table extraction
 
 Check your versions:
@@ -71,6 +75,7 @@ Open `backend/.env` and set the key(s) for the provider(s) you want to use:
 ```
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 MISTRAL_API_KEY=your_mistral_api_key_here
+GLM_API_KEY=your_glm_api_key_here
 PORT=3001
 ```
 
@@ -156,7 +161,7 @@ If `model` is omitted, it defaults to `deepseek-chat`.
 
 | Layer | Tech |
 |-------|------|
-| LLM | DeepSeek / Mistral (OpenAI-compatible APIs) |
+| LLM | DeepSeek / Mistral / GLM (OpenAI-compatible APIs) |
 | Backend | Express + TypeScript |
 | Frontend | React 18 + Vite + TypeScript |
 | Streaming | Server-Sent Events (SSE) |
