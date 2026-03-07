@@ -3,7 +3,9 @@ import type { OfficeFile } from "../types.js";
 import { FILE_ICONS } from "../types.js";
 
 interface Props {
-  onFileSelect: (path: string) => void;
+  selectedPaths: Set<string>;
+  onToggleFile: (path: string) => void;
+  onSelectAll: (paths: string[]) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -12,7 +14,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function Sidebar({ onFileSelect }: Props) {
+export function Sidebar({ selectedPaths, onToggleFile, onSelectAll }: Props) {
   const [directory, setDirectory] = useState("");
   const [recursive, setRecursive] = useState(false);
   const [files, setFiles] = useState<OfficeFile[]>([]);
@@ -35,6 +37,17 @@ export function Sidebar({ onFileSelect }: Props) {
       setLoading(false);
     }
   }, [directory, recursive]);
+
+  const allPaths = files.map((f) => f.path);
+  const allSelected = allPaths.length > 0 && allPaths.every((p) => selectedPaths.has(p));
+
+  const handleToggleAll = () => {
+    if (allSelected) {
+      onSelectAll([]); // signal to deselect these files
+    } else {
+      onSelectAll(allPaths);
+    }
+  };
 
   const grouped = files.reduce<Record<string, OfficeFile[]>>((acc, f) => {
     acc[f.extension] = acc[f.extension] ?? [];
@@ -73,22 +86,34 @@ export function Sidebar({ onFileSelect }: Props) {
           <p className="sidebar-empty">No files found. Enter a directory path and click Scan.</p>
         )}
 
+        {files.length > 0 && (
+          <div className="sidebar-select-bar">
+            <button className="btn-link" onClick={handleToggleAll}>
+              {allSelected ? "Deselect all" : "Select all"} ({files.length})
+            </button>
+          </div>
+        )}
+
         {Object.entries(grouped).map(([ext, extFiles]) => (
           <div key={ext} className="file-group">
             <div className="file-group-header">
               {FILE_ICONS[ext] ?? "📄"} .{ext.toUpperCase()} ({extFiles.length})
             </div>
-            {extFiles.map((f) => (
-              <button
-                key={f.path}
-                className="file-item"
-                onClick={() => onFileSelect(f.path)}
-                title={f.path}
-              >
-                <span className="file-name">{f.name}</span>
-                <span className="file-meta">{formatSize(f.size_bytes)}</span>
-              </button>
-            ))}
+            {extFiles.map((f) => {
+              const isSelected = selectedPaths.has(f.path);
+              return (
+                <button
+                  key={f.path}
+                  className={`file-item${isSelected ? " file-item--selected" : ""}`}
+                  onClick={() => onToggleFile(f.path)}
+                  title={f.path}
+                >
+                  <span className="file-item-check">{isSelected ? "☑" : "☐"}</span>
+                  <span className="file-name">{f.name}</span>
+                  <span className="file-meta">{formatSize(f.size_bytes)}</span>
+                </button>
+              );
+            })}
           </div>
         ))}
       </div>

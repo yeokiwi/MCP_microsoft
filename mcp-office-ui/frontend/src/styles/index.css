@@ -222,8 +222,84 @@ body {
 }
 
 .file-item:hover { background: var(--bg-3); }
+.file-item--selected { background: rgba(var(--accent-rgb, 99,102,241), 0.12); }
+.file-item--selected:hover { background: rgba(var(--accent-rgb, 99,102,241), 0.2); }
+.file-item-check { flex-shrink: 0; font-size: 14px; color: var(--accent); }
 .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-meta { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
+
+.sidebar-select-bar {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px 2px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.btn-link:hover { opacity: 0.8; }
+
+/* ── Selected files chips ────────────────────────────────────────────────────── */
+.selected-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.selected-files-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.selected-files-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(var(--accent-rgb, 99,102,241), 0.15);
+  border: 1px solid rgba(var(--accent-rgb, 99,102,241), 0.35);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+.file-chip-remove:hover { color: var(--error); }
 
 /* ── Chat main ───────────────────────────────────────────────────────────────── */
 .chat-main {
