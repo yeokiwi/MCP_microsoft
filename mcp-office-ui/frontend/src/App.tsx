@@ -3,20 +3,30 @@ import { useChat } from "./hooks/useChat.js";
 import { MessageBubble } from "./components/MessageBubble.js";
 import { Sidebar } from "./components/Sidebar.js";
 
-const MODELS = [
-  { value: "deepseek-chat", label: "DeepSeek Chat", provider: "DeepSeek" },
-  { value: "deepseek-reasoner", label: "DeepSeek Reasoner", provider: "DeepSeek" },
-  { value: "mistral-small-latest", label: "Mistral Small", provider: "Mistral" },
-  { value: "mistral-large-latest", label: "Mistral Large", provider: "Mistral" },
-  { value: "open-mistral-7b", label: "Mistral 7B (open)", provider: "Mistral" },
-  { value: "open-mixtral-8x7b", label: "Mixtral 8x7B (open)", provider: "Mistral" },
-  { value: "glm-4", label: "GLM-4", provider: "GLM" },
-  { value: "glm-4-flash", label: "GLM-4 Flash", provider: "GLM" },
-  { value: "glm-4-air", label: "GLM-4 Air", provider: "GLM" },
-];
+interface ModelOption {
+  value: string;
+  label: string;
+  provider: string;
+}
+
+function modelProvider(id: string): string {
+  if (id.startsWith("mistral") || id.startsWith("open-mistral") || id.startsWith("open-mixtral")) return "Mistral";
+  if (id.startsWith("glm-")) return "GLM";
+  return "DeepSeek";
+}
+
+function modelLabel(id: string): string {
+  if (id.startsWith("open-mistral-")) return `Mistral ${id.replace("open-mistral-", "")} (open)`;
+  if (id.startsWith("open-mixtral-")) return `Mixtral ${id.replace("open-mixtral-", "")} (open)`;
+  if (id.startsWith("mistral-")) return `Mistral ${id.replace("mistral-", "").replace(/-latest$/, "")}`.replace(/\b\w/g, (c) => c.toUpperCase());
+  if (id.startsWith("deepseek-")) return `DeepSeek ${id.replace("deepseek-", "")}`.replace(/\b\w/g, (c) => c.toUpperCase());
+  if (id.startsWith("glm-")) return id.toUpperCase();
+  return id;
+}
 
 export default function App() {
-  const [selectedModel, setSelectedModel] = useState(MODELS[0].value);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [selectedModel, setSelectedModel] = useState("");
   const { messages, isLoading, sendMessage, stopGeneration, clearChat } = useChat(selectedModel);
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -24,7 +34,30 @@ export default function App() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const currentModel = MODELS.find((m) => m.value === selectedModel) ?? MODELS[0];
+  // Fetch available models from backend on mount
+  useEffect(() => {
+    fetch("/api/models")
+      .then((r) => r.json())
+      .then((data: { models: string[] }) => {
+        const opts: ModelOption[] = data.models.map((id) => ({
+          value: id,
+          label: modelLabel(id),
+          provider: modelProvider(id),
+        }));
+        setModels(opts);
+        if (opts.length > 0) setSelectedModel(opts[0].value);
+      })
+      .catch(() => {
+        // Fallback: a single editable entry so the user can still type a model
+        setModels([{ value: "deepseek-chat", label: "DeepSeek Chat", provider: "DeepSeek" }]);
+        setSelectedModel("deepseek-chat");
+      });
+  }, []);
+
+  const currentModel = models.find((m) => m.value === selectedModel);
+
+  // Group models by provider for the <select> optgroups
+  const providers = [...new Set(models.map((m) => m.provider))];
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -40,11 +73,8 @@ export default function App() {
     });
   }, []);
 
-  // Called with a list of paths to add, or empty array to deselect all current scanned files
   const handleSelectAll = useCallback((paths: string[]) => {
     if (paths.length === 0) {
-      // Sidebar signals "deselect all" — we clear only the paths it knows about,
-      // but since we don't have them here, clear everything.
       setSelectedPaths(new Set());
     } else {
       setSelectedPaths((prev) => {
@@ -71,7 +101,9 @@ export default function App() {
     if (selectedPaths.size > 0) {
       const fileList = [...selectedPaths].map((p) => `- ${p}`).join("\n");
       const fileContext = `Selected files:\n${fileList}`;
-      message = text ? `${fileContext}\n\n${text}` : `${fileContext}\n\nPlease read and summarise the selected file${selectedPaths.size > 1 ? "s" : ""}.`;
+      message = text
+        ? `${fileContext}\n\n${text}`
+        : `${fileContext}\n\nPlease read and summarise the selected file${selectedPaths.size > 1 ? "s" : ""}.`;
     }
 
     setInput("");
@@ -114,33 +146,29 @@ export default function App() {
           <h1 className="app-title">
             <span className="app-logo">📄</span>
             MCP Office Reader
-            <span className="app-subtitle">powered by {currentModel.provider}</span>
+            {currentModel && (
+              <span className="app-subtitle">powered by {currentModel.provider}</span>
+            )}
           </h1>
         </div>
         <div className="topbar-right">
-          <select
-            className="model-selector"
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={isLoading}
-            title="Select LLM model"
-          >
-            <optgroup label="DeepSeek">
-              {MODELS.filter((m) => m.provider === "DeepSeek").map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
+          {models.length > 0 && (
+            <select
+              className="model-selector"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={isLoading}
+              title="Select LLM model"
+            >
+              {providers.map((provider) => (
+                <optgroup key={provider} label={provider}>
+                  {models.filter((m) => m.provider === provider).map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </optgroup>
               ))}
-            </optgroup>
-            <optgroup label="Mistral">
-              {MODELS.filter((m) => m.provider === "Mistral").map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </optgroup>
-            <optgroup label="GLM (Zhipu AI)">
-              {MODELS.filter((m) => m.provider === "GLM").map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </optgroup>
-          </select>
+            </select>
+          )}
           <button className="btn btn-ghost" onClick={clearChat} title="Clear chat">
             🗑 Clear
           </button>
@@ -172,11 +200,7 @@ export default function App() {
               <p className="suggestions-label">Try asking:</p>
               <div className="suggestions-grid">
                 {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    className="suggestion-chip"
-                    onClick={() => sendMessage(s)}
-                  >
+                  <button key={s} className="suggestion-chip" onClick={() => sendMessage(s)}>
                     {s}
                   </button>
                 ))}

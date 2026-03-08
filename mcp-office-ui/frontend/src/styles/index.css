@@ -228,6 +228,33 @@ body {
 .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-meta { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
 
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 2px;
+}
+
+.sort-bar-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.sort-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sort-btn:hover { background: var(--bg-3); color: var(--text); }
+.sort-btn--active { background: var(--bg-3); color: var(--text); border-color: var(--accent); }
+
 .sidebar-select-bar {
   display: flex;
   align-items: center;

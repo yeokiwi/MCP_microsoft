@@ -1,6 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { OfficeFile } from "../types.js";
 import { FILE_ICONS } from "../types.js";
+
+type SortField = "date" | "size" | "type";
+type SortDir = "asc" | "desc";
 
 interface Props {
   selectedPaths: Set<string>;
@@ -14,12 +17,19 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatDate(iso?: string): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
 export function Sidebar({ selectedPaths, onToggleFile, onSelectAll }: Props) {
   const [directory, setDirectory] = useState("");
   const [recursive, setRecursive] = useState(false);
   const [files, setFiles] = useState<OfficeFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sortField, setSortField] = useState<SortField>("type");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const browseDirectory = useCallback(async () => {
     if (!directory.trim()) return;
@@ -38,22 +48,56 @@ export function Sidebar({ selectedPaths, onToggleFile, onSelectAll }: Props) {
     }
   }, [directory, recursive]);
 
-  const allPaths = files.map((f) => f.path);
-  const allSelected = allPaths.length > 0 && allPaths.every((p) => selectedPaths.has(p));
+  const sortedFiles = useMemo(() => {
+    const sorted = [...files].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "date") {
+        cmp = (a.modified ?? "").localeCompare(b.modified ?? "");
+      } else if (sortField === "size") {
+        cmp = a.size_bytes - b.size_bytes;
+      } else {
+        // type: sort by extension then name
+        cmp = a.extension.localeCompare(b.extension) || a.name.localeCompare(b.name);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [files, sortField, sortDir]);
 
-  const handleToggleAll = () => {
-    if (allSelected) {
-      onSelectAll([]); // signal to deselect these files
+  const handleSortField = (field: SortField) => {
+    if (field === sortField) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      onSelectAll(allPaths);
+      setSortField(field);
+      setSortDir("asc");
     }
   };
 
-  const grouped = files.reduce<Record<string, OfficeFile[]>>((acc, f) => {
-    acc[f.extension] = acc[f.extension] ?? [];
-    acc[f.extension].push(f);
-    return acc;
-  }, {});
+  const allPaths = sortedFiles.map((f) => f.path);
+  const allSelected = allPaths.length > 0 && allPaths.every((p) => selectedPaths.has(p));
+
+  const handleToggleAll = () => {
+    onSelectAll(allSelected ? [] : allPaths);
+  };
+
+  const grouped = useMemo(() => {
+    if (sortField === "type") {
+      // Group by extension when sorting by type
+      return sortedFiles.reduce<Record<string, OfficeFile[]>>((acc, f) => {
+        acc[f.extension] = acc[f.extension] ?? [];
+        acc[f.extension].push(f);
+        return acc;
+      }, {});
+    }
+    // For date/size sorts, show a flat "All files" group to preserve order
+    return sortedFiles.length > 0 ? { "": sortedFiles } : {};
+  }, [sortedFiles, sortField]);
+
+  const sortLabel = (field: SortField) => {
+    const labels: Record<SortField, string> = { date: "Date", size: "Size", type: "Type" };
+    const active = field === sortField;
+    return `${labels[field]}${active ? (sortDir === "asc" ? " ↑" : " ↓") : ""}`;
+  };
 
   return (
     <aside className="sidebar">
@@ -87,18 +131,37 @@ export function Sidebar({ selectedPaths, onToggleFile, onSelectAll }: Props) {
         )}
 
         {files.length > 0 && (
-          <div className="sidebar-select-bar">
-            <button className="btn-link" onClick={handleToggleAll}>
-              {allSelected ? "Deselect all" : "Select all"} ({files.length})
-            </button>
-          </div>
+          <>
+            {/* Sort bar */}
+            <div className="sort-bar">
+              <span className="sort-bar-label">Sort:</span>
+              {(["type", "date", "size"] as SortField[]).map((f) => (
+                <button
+                  key={f}
+                  className={`sort-btn${sortField === f ? " sort-btn--active" : ""}`}
+                  onClick={() => handleSortField(f)}
+                >
+                  {sortLabel(f)}
+                </button>
+              ))}
+            </div>
+
+            {/* Select all bar */}
+            <div className="sidebar-select-bar">
+              <button className="btn-link" onClick={handleToggleAll}>
+                {allSelected ? "Deselect all" : "Select all"} ({files.length})
+              </button>
+            </div>
+          </>
         )}
 
         {Object.entries(grouped).map(([ext, extFiles]) => (
           <div key={ext} className="file-group">
-            <div className="file-group-header">
-              {FILE_ICONS[ext] ?? "📄"} .{ext.toUpperCase()} ({extFiles.length})
-            </div>
+            {ext && (
+              <div className="file-group-header">
+                {FILE_ICONS[ext] ?? "📄"} .{ext.toUpperCase()} ({extFiles.length})
+              </div>
+            )}
             {extFiles.map((f) => {
               const isSelected = selectedPaths.has(f.path);
               return (
@@ -110,7 +173,9 @@ export function Sidebar({ selectedPaths, onToggleFile, onSelectAll }: Props) {
                 >
                   <span className="file-item-check">{isSelected ? "☑" : "☐"}</span>
                   <span className="file-name">{f.name}</span>
-                  <span className="file-meta">{formatSize(f.size_bytes)}</span>
+                  <span className="file-meta">
+                    {sortField === "date" ? formatDate(f.modified) : formatSize(f.size_bytes)}
+                  </span>
                 </button>
               );
             })}
