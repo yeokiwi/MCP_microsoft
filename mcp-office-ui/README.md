@@ -106,19 +106,27 @@ All commands below assume you are inside the `mcp-office-ui/` directory.
 cp backend/.env.example backend/.env
 ```
 
-Open `backend/.env` and set your OpenAI API key:
+Open `backend/.env` and configure it for your chosen provider:
 
+**OpenAI (default)**
 ```dotenv
 OPENAI_API_KEY=sk-...
-
-# Optional: override the endpoint (Azure, local server, proxy, etc.)
-# OPENAI_BASE_URL=https://your-endpoint/v1
-
+OPENAI_BASE_URL=https://api.openai.com/v1
+MODELS=gpt-4o,gpt-4o-mini,gpt-4-turbo,gpt-3.5-turbo
 PORT=3001
-
-# Optional: comma-separated list of model IDs to show in the dropdown
-# MODELS=gpt-4o,gpt-4o-mini,gpt-4-turbo,gpt-3.5-turbo
 ```
+
+**DeepSeek**
+```dotenv
+OPENAI_API_KEY=your_deepseek_api_key
+OPENAI_BASE_URL=https://api.deepseek.com/v1
+MODELS=deepseek-chat,deepseek-reasoner
+PORT=3001
+```
+
+> **Important:** `MODELS` must match the model IDs accepted by your endpoint.
+> If you change the endpoint but leave `MODELS` set to OpenAI model IDs (or vice versa),
+> the API will return a "model not found" error.
 
 ### 2. Install dependencies
 
@@ -180,22 +188,19 @@ All configuration lives in `backend/.env`. Copy `backend/.env.example` as a star
 | `PORT` | No | `3001` | Port for the Express backend |
 | `MODELS` | No | built-in list | Comma-separated model IDs for the UI dropdown |
 
-### Using a custom or self-hosted endpoint
+### Using an alternative or self-hosted endpoint
 
-Set `OPENAI_BASE_URL` to any OpenAI-compatible endpoint:
+Set `OPENAI_BASE_URL` and `MODELS` to match your provider:
 
-```dotenv
-# Azure OpenAI
-OPENAI_BASE_URL=https://<resource>.openai.azure.com/openai/deployments/<deployment>
+| Provider | `OPENAI_BASE_URL` | Example `MODELS` |
+|----------|-------------------|-----------------|
+| OpenAI (default) | `https://api.openai.com/v1` | `gpt-4o,gpt-4o-mini` |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat,deepseek-reasoner` |
+| Azure OpenAI | `https://<resource>.openai.azure.com/openai/deployments/<deployment>` | deployment name |
+| Ollama (local) | `http://localhost:11434/v1` | `llama3,mistral` |
+| LM Studio (local) | `http://localhost:1234/v1` | model name shown in LM Studio |
 
-# Ollama (local)
-OPENAI_BASE_URL=http://localhost:11434/v1
-
-# LM Studio (local)
-OPENAI_BASE_URL=http://localhost:1234/v1
-```
-
-Then set `MODELS` to the model IDs your endpoint accepts and restart the backend.
+> Always restart the backend after editing `.env`.
 
 ---
 
