@@ -193,13 +193,16 @@ pip3 install pdfplumber
 
 All configuration lives in `backend/.env`. Copy `backend/.env.example` as a starting point.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DEEPSEEK_API_KEY` | If using DeepSeek models | API key from platform.deepseek.com |
-| `MISTRAL_API_KEY` | If using Mistral models | API key from console.mistral.ai |
-| `GLM_API_KEY` | If using GLM models | API key from open.bigmodel.cn |
-| `PORT` | No (default `3001`) | Port for the Express backend |
-| `MODELS` | No | Comma-separated model IDs for the UI dropdown |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DEEPSEEK_API_KEY` | If using DeepSeek models | — | API key from platform.deepseek.com |
+| `MISTRAL_API_KEY` | If using Mistral models | — | API key from console.mistral.ai |
+| `GLM_API_KEY` | If using GLM models | — | API key from open.bigmodel.cn |
+| `DEEPSEEK_BASE_URL` | No | `https://api.deepseek.com` | Override for self-hosted or proxy endpoints |
+| `MISTRAL_BASE_URL` | No | `https://api.mistral.ai/v1` | Override for self-hosted or proxy endpoints |
+| `GLM_BASE_URL` | No | `https://open.bigmodel.cn/api/paas/v4` | Override for self-hosted or proxy endpoints |
+| `PORT` | No | `3001` | Port for the Express backend |
+| `MODELS` | No | built-in list | Comma-separated model IDs for the UI dropdown |
 
 ### Adding a new model
 

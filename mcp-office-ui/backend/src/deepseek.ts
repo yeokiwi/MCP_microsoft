@@ -12,17 +12,17 @@ function createLLMClient(model: string): OpenAI {
   if (model.startsWith("mistral") || model.startsWith("open-mistral") || model.startsWith("open-mixtral")) {
     const apiKey = process.env.MISTRAL_API_KEY;
     if (!apiKey) throw new Error("MISTRAL_API_KEY environment variable is not set");
-    return new OpenAI({ apiKey, baseURL: "https://api.mistral.ai/v1" });
+    return new OpenAI({ apiKey, baseURL: process.env.MISTRAL_BASE_URL ?? "https://api.mistral.ai/v1" });
   }
   if (model.startsWith("glm-")) {
     const apiKey = process.env.GLM_API_KEY;
     if (!apiKey) throw new Error("GLM_API_KEY environment variable is not set");
-    return new OpenAI({ apiKey, baseURL: "https://open.bigmodel.cn/api/paas/v4" });
+    return new OpenAI({ apiKey, baseURL: process.env.GLM_BASE_URL ?? "https://open.bigmodel.cn/api/paas/v4" });
   }
   // Default: DeepSeek
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error("DEEPSEEK_API_KEY environment variable is not set");
-  return new OpenAI({ apiKey, baseURL: "https://api.deepseek.com" });
+  return new OpenAI({ apiKey, baseURL: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com" });
 }
 
 export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
