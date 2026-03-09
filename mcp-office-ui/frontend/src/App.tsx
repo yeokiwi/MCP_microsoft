@@ -8,20 +8,10 @@ interface ModelOption {
   label: string;
 }
 
-const DEFAULT_CONTEXT_SIZE = 20;
-
 export default function App() {
   const [models, setModels] = useState<ModelOption[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
-  const [contextShift, setContextShift] = useState(false);
-  const [contextSize, setContextSize] = useState(DEFAULT_CONTEXT_SIZE);
-
-  const { messages, isLoading, sendMessage, stopGeneration, clearChat } = useChat({
-    model: selectedModel,
-    contextShift,
-    contextSize,
-  });
-
+  const { messages, isLoading, sendMessage, stopGeneration, clearChat } = useChat(selectedModel);
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
@@ -109,11 +99,6 @@ export default function App() {
     ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   };
 
-  const handleContextSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = parseInt(e.target.value, 10);
-    if (!isNaN(v) && v >= 2) setContextSize(v);
-  };
-
   const SUGGESTIONS = [
     "List all Office files in /tmp",
     "Read and summarise a Word document at /path/to/file.docx",
@@ -139,31 +124,6 @@ export default function App() {
           </h1>
         </div>
         <div className="topbar-right">
-          {/* Context shift toggle */}
-          <label className="context-shift-label" title="When enabled, old messages are dropped to stay within the context size limit">
-            <input
-              type="checkbox"
-              checked={contextShift}
-              onChange={(e) => setContextShift(e.target.checked)}
-              disabled={isLoading}
-            />
-            Context shift
-          </label>
-
-          {/* Context size input — only active when context shift is on */}
-          <label className="context-size-label" title="Maximum number of messages to keep in the conversation history">
-            Size:
-            <input
-              type="number"
-              className="context-size-input"
-              value={contextSize}
-              min={2}
-              step={1}
-              onChange={handleContextSizeChange}
-              disabled={!contextShift || isLoading}
-            />
-          </label>
-
           {models.length > 0 && (
             <select
               className="model-selector"

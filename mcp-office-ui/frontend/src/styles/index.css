@@ -632,41 +632,6 @@ body {
 }
 .btn-ghost:hover { background: var(--bg-3); color: var(--text); }
 
-/* ── Context shift controls ──────────────────────────────────────────────────── */
-.context-shift-label,
-.context-size-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  user-select: none;
-}
-
-.context-shift-label input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
-}
-
-.context-shift-label input[type="checkbox"]:disabled { cursor: not-allowed; }
-
-.context-size-input {
-  width: 54px;
-  background: var(--bg-2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 3px 6px;
-  font-size: 0.82rem;
-  text-align: center;
-  outline: none;
-}
-.context-size-input:focus { border-color: var(--accent); }
-.context-size-input:disabled { opacity: 0.4; cursor: not-allowed; }
-
 .model-selector {
   background: var(--bg-2);
   color: var(--text);

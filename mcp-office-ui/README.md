@@ -45,8 +45,6 @@ Office Tool Executor
 - **Streaming responses** via Server-Sent Events (SSE)
 - **Agentic tool use** — the LLM automatically calls the right Office/PDF tool based on your question and iterates until it has a final answer
 - **Tool call inspector** — expandable cards show each tool call name, arguments, and raw result
-- **Context shift** — toggle in the topbar; when enabled, old messages are dropped (sliding window) so the conversation always fits within the context size limit
-- **Context size** — number input in the topbar (active when context shift is on); sets the maximum number of messages retained; the system message is always preserved
 
 ### File browser
 
@@ -189,8 +187,6 @@ All configuration lives in `backend/.env`. Copy `backend/.env.example` as a star
 | `OPENAI_BASE_URL` | No | `https://api.openai.com/v1` | Override for Azure, local, or proxy endpoints |
 | `PORT` | No | `3001` | Port for the Express backend |
 | `MODELS` | No | built-in list | Comma-separated model IDs for the UI dropdown |
-| `CONTEXT_SHIFT` | No | `false` | Server-side default for the context shift toggle |
-| `CONTEXT_SIZE` | No | `20` | Server-side default for the max messages to retain |
 
 ### Using an alternative or self-hosted endpoint
 
