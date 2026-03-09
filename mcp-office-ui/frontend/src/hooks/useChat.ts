@@ -7,7 +7,13 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function useChat(model: string) {
+export interface ChatSettings {
+  model: string;
+  contextShift: boolean;
+  contextSize: number;
+}
+
+export function useChat(settings: ChatSettings) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: uid(),
@@ -33,7 +39,6 @@ export function useChat(model: string) {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    // Build conversation for API (skip initial assistant greeting from history if desired)
     const historyMessages = [...messages, userMsg].map((m) => ({
       role: m.role,
       content: m.content || (m.toolCalls?.map((tc) => `[Tool: ${tc.name}] ${tc.result ?? ""}`).join("\n") ?? ""),
@@ -43,7 +48,12 @@ export function useChat(model: string) {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: historyMessages, model }),
+        body: JSON.stringify({
+          messages: historyMessages,
+          model: settings.model,
+          contextShift: settings.contextShift,
+          contextSize: settings.contextSize,
+        }),
         signal: ctrl.signal,
       });
 
@@ -118,7 +128,7 @@ export function useChat(model: string) {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, settings]);
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();

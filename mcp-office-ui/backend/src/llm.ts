@@ -142,19 +142,51 @@ export interface StreamEvent {
   error?: string;
 }
 
+export interface LLMOptions {
+  model?: string;
+  /** When true, old messages are dropped to stay within contextSize. */
+  contextShift?: boolean;
+  /** Max number of messages to retain when contextShift is enabled (default 20). */
+  contextSize?: number;
+}
+
+/**
+ * Trims conversation history to at most maxMessages entries.
+ * Always preserves the leading system message if present.
+ */
+function trimMessages(
+  messages: ChatCompletionMessageParam[],
+  maxMessages: number
+): ChatCompletionMessageParam[] {
+  if (messages.length <= maxMessages) return messages;
+  const systemMsg = messages[0]?.role === "system" ? [messages[0]] : [];
+  const rest = messages.slice(systemMsg.length);
+  return [...systemMsg, ...rest.slice(-(maxMessages - systemMsg.length))];
+}
+
 export async function chatWithLLM(
   messages: ChatCompletionMessageParam[],
   onEvent: (event: StreamEvent) => void,
-  model = "gpt-4o"
+  options: LLMOptions | string = {}
 ): Promise<void> {
+  // Accept legacy string model arg for backwards compatibility
+  const opts: LLMOptions = typeof options === "string" ? { model: options } : options;
+  const model = opts.model ?? process.env.DEFAULT_MODEL ?? "gpt-4o";
+  const contextShift = opts.contextShift ?? process.env.CONTEXT_SHIFT === "true";
+  const contextSize = opts.contextSize ?? parseInt(process.env.CONTEXT_SIZE ?? "20", 10);
+
   const client = createLLMClient();
   const conversationMessages: ChatCompletionMessageParam[] = [...messages];
 
   // Agentic loop: keep running until model produces a final text response
   while (true) {
+    const messagesToSend = contextShift
+      ? trimMessages(conversationMessages, contextSize)
+      : conversationMessages;
+
     const stream = await client.chat.completions.create({
       model,
-      messages: conversationMessages,
+      messages: messagesToSend,
       tools: TOOL_DEFINITIONS,
       tool_choice: "auto",
       stream: true,

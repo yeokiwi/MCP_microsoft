@@ -5,9 +5,11 @@ import { chatWithLLM } from "../llm.js";
 const router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
-  const { messages, model } = req.body as {
+  const { messages, model, contextShift, contextSize } = req.body as {
     messages?: ChatCompletionMessageParam[];
     model?: string;
+    contextShift?: boolean;
+    contextSize?: number;
   };
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -26,11 +28,7 @@ router.post("/", async (req: Request, res: Response) => {
   };
 
   try {
-    await chatWithLLM(
-      messages,
-      (event) => send(event),
-      model ?? "gpt-4o"
-    );
+    await chatWithLLM(messages, (event) => send(event), { model, contextShift, contextSize });
   } catch (e) {
     send({ type: "error", error: (e as Error).message });
   } finally {
