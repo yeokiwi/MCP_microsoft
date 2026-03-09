@@ -8,21 +8,13 @@ import {
   listOfficeFiles,
 } from "./tools/executor.js";
 
-function createLLMClient(model: string): OpenAI {
-  if (model.startsWith("mistral") || model.startsWith("open-mistral") || model.startsWith("open-mixtral")) {
-    const apiKey = process.env.MISTRAL_API_KEY;
-    if (!apiKey) throw new Error("MISTRAL_API_KEY environment variable is not set");
-    return new OpenAI({ apiKey, baseURL: process.env.MISTRAL_BASE_URL ?? "https://api.mistral.ai/v1" });
-  }
-  if (model.startsWith("glm-")) {
-    const apiKey = process.env.GLM_API_KEY;
-    if (!apiKey) throw new Error("GLM_API_KEY environment variable is not set");
-    return new OpenAI({ apiKey, baseURL: process.env.GLM_BASE_URL ?? "https://open.bigmodel.cn/api/paas/v4" });
-  }
-  // Default: DeepSeek
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) throw new Error("DEEPSEEK_API_KEY environment variable is not set");
-  return new OpenAI({ apiKey, baseURL: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com" });
+function createLLMClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY environment variable is not set");
+  return new OpenAI({
+    apiKey,
+    baseURL: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+  });
 }
 
 export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
@@ -114,7 +106,6 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
   },
 ];
 
-// Execute a tool call by name
 export async function executeTool(name: string, args: Record<string, unknown>): Promise<string> {
   try {
     let result: unknown;
@@ -151,14 +142,12 @@ export interface StreamEvent {
   error?: string;
 }
 
-// Chat with the selected LLM using tool calling, streaming events via callback.
-// Supports DeepSeek (deepseek-*) and Mistral (mistral-*, open-mistral-*, open-mixtral-*).
 export async function chatWithLLM(
   messages: ChatCompletionMessageParam[],
   onEvent: (event: StreamEvent) => void,
-  model = "deepseek-chat"
+  model = "gpt-4o"
 ): Promise<void> {
-  const client = createLLMClient(model);
+  const client = createLLMClient();
   const conversationMessages: ChatCompletionMessageParam[] = [...messages];
 
   // Agentic loop: keep running until model produces a final text response
@@ -178,13 +167,11 @@ export async function chatWithLLM(
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
 
-      // Accumulate text
       if (delta.content) {
         currentText += delta.content;
         onEvent({ type: "text", content: delta.content });
       }
 
-      // Accumulate tool calls
       if (delta.tool_calls) {
         for (const tc of delta.tool_calls) {
           const idx = tc.index ?? 0;
@@ -207,13 +194,11 @@ export async function chatWithLLM(
       }
     }
 
-    // Execute tool calls
     if (toolCalls.length === 0) {
       onEvent({ type: "done" });
       return;
     }
 
-    // Add assistant message with tool calls
     conversationMessages.push({
       role: "assistant",
       content: currentText || null,
@@ -224,7 +209,6 @@ export async function chatWithLLM(
       })),
     });
 
-    // Execute each tool call and add results
     for (const tc of toolCalls) {
       onEvent({ type: "tool_call", tool: { id: tc.id, name: tc.name, args: tc.arguments } });
 
@@ -240,9 +224,5 @@ export async function chatWithLLM(
         content: result,
       });
     }
-    // Continue loop to get next model response
   }
 }
-
-// Keep the old name as an alias for backwards compatibility
-export const chatWithDeepSeek = chatWithLLM;

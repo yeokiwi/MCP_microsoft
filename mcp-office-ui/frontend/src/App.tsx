@@ -6,22 +6,6 @@ import { Sidebar } from "./components/Sidebar.js";
 interface ModelOption {
   value: string;
   label: string;
-  provider: string;
-}
-
-function modelProvider(id: string): string {
-  if (id.startsWith("mistral") || id.startsWith("open-mistral") || id.startsWith("open-mixtral")) return "Mistral";
-  if (id.startsWith("glm-")) return "GLM";
-  return "DeepSeek";
-}
-
-function modelLabel(id: string): string {
-  if (id.startsWith("open-mistral-")) return `Mistral ${id.replace("open-mistral-", "")} (open)`;
-  if (id.startsWith("open-mixtral-")) return `Mixtral ${id.replace("open-mixtral-", "")} (open)`;
-  if (id.startsWith("mistral-")) return `Mistral ${id.replace("mistral-", "").replace(/-latest$/, "")}`.replace(/\b\w/g, (c) => c.toUpperCase());
-  if (id.startsWith("deepseek-")) return `DeepSeek ${id.replace("deepseek-", "")}`.replace(/\b\w/g, (c) => c.toUpperCase());
-  if (id.startsWith("glm-")) return id.toUpperCase();
-  return id;
 }
 
 export default function App() {
@@ -39,25 +23,15 @@ export default function App() {
     fetch("/api/models")
       .then((r) => r.json())
       .then((data: { models: string[] }) => {
-        const opts: ModelOption[] = data.models.map((id) => ({
-          value: id,
-          label: modelLabel(id),
-          provider: modelProvider(id),
-        }));
+        const opts: ModelOption[] = data.models.map((id) => ({ value: id, label: id }));
         setModels(opts);
         if (opts.length > 0) setSelectedModel(opts[0].value);
       })
       .catch(() => {
-        // Fallback: a single editable entry so the user can still type a model
-        setModels([{ value: "deepseek-chat", label: "DeepSeek Chat", provider: "DeepSeek" }]);
-        setSelectedModel("deepseek-chat");
+        setModels([{ value: "gpt-4o", label: "gpt-4o" }]);
+        setSelectedModel("gpt-4o");
       });
   }, []);
-
-  const currentModel = models.find((m) => m.value === selectedModel);
-
-  // Group models by provider for the <select> optgroups
-  const providers = [...new Set(models.map((m) => m.provider))];
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -146,9 +120,7 @@ export default function App() {
           <h1 className="app-title">
             <span className="app-logo">📄</span>
             MCP Office Reader
-            {currentModel && (
-              <span className="app-subtitle">powered by {currentModel.provider}</span>
-            )}
+            <span className="app-subtitle">powered by OpenAI</span>
           </h1>
         </div>
         <div className="topbar-right">
@@ -158,14 +130,10 @@ export default function App() {
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               disabled={isLoading}
-              title="Select LLM model"
+              title="Select model"
             >
-              {providers.map((provider) => (
-                <optgroup key={provider} label={provider}>
-                  {models.filter((m) => m.provider === provider).map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </optgroup>
+              {models.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </select>
           )}

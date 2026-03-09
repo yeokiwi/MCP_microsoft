@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions.js";
-import { chatWithLLM } from "../deepseek.js";
+import { chatWithLLM } from "../llm.js";
 
 const router = Router();
 
@@ -29,7 +29,7 @@ router.post("/", async (req: Request, res: Response) => {
     await chatWithLLM(
       messages,
       (event) => send(event),
-      model ?? "deepseek-chat"
+      model ?? "gpt-4o"
     );
   } catch (e) {
     send({ type: "error", error: (e as Error).message });

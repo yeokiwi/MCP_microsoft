@@ -3,15 +3,10 @@ import { Router, Request, Response } from "express";
 const router = Router();
 
 const DEFAULT_MODELS = [
-  "deepseek-chat",
-  "deepseek-reasoner",
-  "mistral-small-latest",
-  "mistral-large-latest",
-  "open-mistral-7b",
-  "open-mixtral-8x7b",
-  "glm-4",
-  "glm-4-flash",
-  "glm-4-air",
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gpt-4-turbo",
+  "gpt-3.5-turbo",
 ];
 
 router.get("/", (_req: Request, res: Response) => {
