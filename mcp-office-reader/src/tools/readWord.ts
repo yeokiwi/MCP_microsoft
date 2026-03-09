@@ -21,6 +21,18 @@ const inputSchema = z.object({
     .describe(
       "Whether to include document metadata (author, dates, word count)"
     ),
+  outline_only: z
+    .boolean()
+    .default(false)
+    .describe(
+      "If true, return only the document outline (list of section headings with 1-indexed numbers) without full content. Use this first on long documents to discover structure before fetching specific sections."
+    ),
+  sections: z
+    .array(z.number().int().positive())
+    .optional()
+    .describe(
+      "Optional: specific 1-indexed section numbers to extract (sections are delimited by headings). Call with outline_only: true first to see available sections."
+    ),
 });
 
 const xmlParser = new XMLParser({
@@ -140,13 +152,39 @@ function countWords(text: string): number {
     .filter((w) => w.length > 0).length;
 }
 
+interface DocSection { index: number; heading: string; content: string; }
+
+function splitIntoSections(content: string): DocSection[] {
+  const lines = content.split("\n");
+  const sections: DocSection[] = [];
+  let sectionIdx = 0;
+  let currentHeading = "";
+  let currentLines: string[] = [];
+
+  for (const line of lines) {
+    if (/^#{1,6} /.test(line)) {
+      if (currentLines.length > 0 || currentHeading) {
+        sections.push({ index: sectionIdx++, heading: currentHeading || "(preamble)", content: currentLines.join("\n").trim() });
+      }
+      currentHeading = line.replace(/^#+\s*/, "").trim();
+      currentLines = [line];
+    } else {
+      currentLines.push(line);
+    }
+  }
+  if (currentLines.length > 0 || currentHeading) {
+    sections.push({ index: sectionIdx, heading: currentHeading || "(document)", content: currentLines.join("\n").trim() });
+  }
+  return sections;
+}
+
 export function registerReadWordTool(server: McpServer): void {
   server.tool(
     "read_word_document",
     "Extracts text content, headings, tables, and metadata from a .docx file.",
     inputSchema.shape,
     async (args) => {
-      const { file_path, output_format, include_metadata } =
+      const { file_path, output_format, include_metadata, outline_only, sections: sectionFilter } =
         inputSchema.parse(args);
 
       const validation = validateFilePath(file_path, ".docx");
@@ -218,6 +256,37 @@ export function registerReadWordTool(server: McpServer): void {
         };
       }
 
+      // Section-based handling (only for markdown/html formats, not plain_text)
+      const allSections = output_format !== "plain_text" ? splitIntoSections(content) : [];
+
+      // outline_only: return just the document structure
+      if (outline_only) {
+        const meta = include_metadata ? extractMetadata(zip) : {};
+        let outlineText = "## Document Outline\n\n";
+        if (meta.title) outlineText += `**Title:** ${meta.title}\n`;
+        if (meta.author) outlineText += `**Author:** ${meta.author}\n`;
+        outlineText += `**Word Count:** ${countWords(content)}\n`;
+        outlineText += `**Sections:** ${allSections.length}\n\n`;
+        outlineText += "### Sections\n\n";
+        for (const sec of allSections) {
+          outlineText += `${sec.index + 1}. ${sec.heading}\n`;
+        }
+        outlineText += "\n\n_Call again with `sections: [n, m, ...]` to fetch specific sections._";
+        return { content: [{ type: "text", text: outlineText }] };
+      }
+
+      // sections filter: extract only selected sections
+      if (sectionFilter && sectionFilter.length > 0 && allSections.length > 0) {
+        const bad = sectionFilter.filter((s) => s < 1 || s > allSections.length);
+        if (bad.length) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: `Error: Section(s) out of range: ${bad.join(", ")} (total: ${allSections.length}). Use outline_only: true to see available sections.` }],
+          };
+        }
+        content = sectionFilter.map((s) => allSections[s - 1].content).join("\n\n");
+      }
+
       // Extract tables from XML
       const tables = extractTablesFromXml(zip);
 
@@ -253,6 +322,8 @@ export function registerReadWordTool(server: McpServer): void {
         if (result.metadata.modified) output += `**Modified:** ${result.metadata.modified}\n`;
         if (result.metadata.word_count !== undefined)
           output += `**Word Count:** ${result.metadata.word_count}\n`;
+        if (allSections.length > 0)
+          output += `**Total Sections:** ${allSections.length}\n`;
         output += "\n---\n\n";
       }
 

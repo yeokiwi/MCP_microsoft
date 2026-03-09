@@ -46,17 +46,51 @@ function validateFile(filePath: string, ext?: string): { ok: boolean; path: stri
 
 // ── Word ──────────────────────────────────────────────────────────────────────
 
+export interface WordSection {
+  index: number;
+  heading: string;
+  content: string;
+}
+
 export interface WordResult {
-  metadata?: { title?: string; author?: string; created?: string; modified?: string; word_count?: number };
+  metadata?: { title?: string; author?: string; created?: string; modified?: string; word_count?: number; section_count?: number };
   content: string;
   tables: { index: number; rows: string[][] }[];
+  sections?: { index: number; heading: string }[];
   error?: string;
+}
+
+/** Split markdown content into sections delimited by any heading level. */
+function splitIntoSections(content: string): WordSection[] {
+  const lines = content.split("\n");
+  const sections: WordSection[] = [];
+  let sectionIdx = 0;
+  let currentHeading = "";
+  let currentLines: string[] = [];
+
+  for (const line of lines) {
+    if (/^#{1,6} /.test(line)) {
+      if (currentLines.length > 0 || currentHeading) {
+        sections.push({ index: sectionIdx++, heading: currentHeading || "(preamble)", content: currentLines.join("\n").trim() });
+      }
+      currentHeading = line.replace(/^#+\s*/, "").trim();
+      currentLines = [line];
+    } else {
+      currentLines.push(line);
+    }
+  }
+  if (currentLines.length > 0 || currentHeading) {
+    sections.push({ index: sectionIdx, heading: currentHeading || "(document)", content: currentLines.join("\n").trim() });
+  }
+  return sections;
 }
 
 export async function readWordDocument(args: {
   file_path: string;
   output_format?: "markdown" | "plain_text" | "json";
   include_metadata?: boolean;
+  outline_only?: boolean;
+  sections?: number[];
 }): Promise<WordResult> {
   const fmt = args.output_format ?? "markdown";
   const { ok, path: p, error } = validateFile(args.file_path, ".docx");
@@ -118,6 +152,31 @@ export async function readWordDocument(args: {
     }
   } catch { /* best-effort */ }
 
+  // Section-based filtering (only applicable to markdown format)
+  const allSections = fmt !== "plain_text" ? splitIntoSections(content) : [];
+  const sectionFilter = args.sections;
+
+  if (args.outline_only) {
+    // Return just the document outline (headings) without full content
+    const outline = allSections.map(({ index, heading }) => ({ index, heading }));
+    const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+    return {
+      metadata: args.include_metadata !== false ? {
+        word_count: wordCount,
+        section_count: allSections.length,
+      } : undefined,
+      content: "",
+      tables: [],
+      sections: outline,
+    };
+  }
+
+  if (sectionFilter && sectionFilter.length > 0 && allSections.length > 0) {
+    const bad = sectionFilter.filter((s) => s < 1 || s > allSections.length);
+    if (bad.length) return { content: "", tables: [], error: `Section(s) out of range: ${bad.join(", ")} (total sections: ${allSections.length}). Call with outline_only: true to see available sections.` };
+    content = sectionFilter.map((s) => allSections[s - 1].content).join("\n\n");
+  }
+
   // Metadata
   let metadata: WordResult["metadata"] | undefined;
   if (args.include_metadata !== false) {
@@ -132,6 +191,7 @@ export async function readWordDocument(args: {
           created: ((props["dcterms:created"] as Record<string, unknown>)?.["#text"] as string) ?? undefined,
           modified: ((props["dcterms:modified"] as Record<string, unknown>)?.["#text"] as string) ?? undefined,
           word_count: content.trim().split(/\s+/).filter(Boolean).length,
+          section_count: allSections.length,
         };
       }
     } catch { /* ignore */ }
@@ -285,6 +345,9 @@ export async function readExcel(args: {
   file_path: string;
   sheets?: string[];
   max_rows?: number;
+  start_row?: number;
+  end_row?: number;
+  columns?: string[];
   include_formulas?: boolean;
   header_row?: boolean;
 }): Promise<ExcelResult> {
@@ -314,11 +377,26 @@ export async function readExcel(args: {
     const ws = wb.Sheets[name];
     if (!ws?.["!ref"]) { sheets[name] = { rows: [], row_count: 0, col_count: 0 }; continue; }
     const range = XLSX.utils.decode_range(ws["!ref"]);
-    const numRows = Math.min(range.e.r - range.s.r + 1, maxRows + (hasHeader ? 1 : 0));
+    const totalDataRows = range.e.r - range.s.r + 1 - (hasHeader ? 1 : 0);
+
+    // Determine row window (1-indexed data rows, excluding header)
+    const startDataRow = Math.max(1, args.start_row ?? 1);
+    const endDataRow = Math.min(totalDataRows, args.end_row ?? Math.min(totalDataRows, startDataRow + maxRows - 1));
+    const headerOffset = hasHeader ? 1 : 0;
+
     const numCols = range.e.c - range.s.c + 1;
     const allRows: (string | number | boolean | null)[][] = [];
 
-    for (let r = range.s.r; r < range.s.r + numRows; r++) {
+    // Always read header row first if present
+    const headerStart = range.s.r;
+    const dataStart = range.s.r + headerOffset + (startDataRow - 1);
+    const dataEnd = range.s.r + headerOffset + endDataRow - 1;
+
+    const rowsToRead = hasHeader
+      ? [headerStart, ...Array.from({ length: dataEnd - dataStart + 1 }, (_, i) => dataStart + i)]
+      : Array.from({ length: dataEnd - dataStart + 1 }, (_, i) => dataStart + i);
+
+    for (const r of rowsToRead) {
       const row: (string | number | boolean | null)[] = [];
       for (let c = range.s.c; c < range.s.c + numCols; c++) {
         const cell = ws[XLSX.utils.encode_cell({ r, c })] as XLSX.CellObject | undefined;
@@ -331,9 +409,18 @@ export async function readExcel(args: {
     }
 
     if (hasHeader && allRows.length > 0) {
-      const headers = allRows[0].map((h) => (h != null ? String(h) : ""));
-      const rows = allRows.slice(1);
-      sheets[name] = { headers, rows, row_count: rows.length, col_count: numCols };
+      const allHeaders = allRows[0].map((h) => (h != null ? String(h) : ""));
+      let dataRows = allRows.slice(1);
+
+      // Apply column filter if specified
+      if (args.columns && args.columns.length > 0) {
+        const colIndices = args.columns.map((col) => allHeaders.indexOf(col)).filter((i) => i >= 0);
+        const filteredHeaders = colIndices.map((i) => allHeaders[i]);
+        dataRows = dataRows.map((row) => colIndices.map((i) => row[i] ?? null));
+        sheets[name] = { headers: filteredHeaders, rows: dataRows, row_count: dataRows.length, col_count: filteredHeaders.length };
+      } else {
+        sheets[name] = { headers: allHeaders, rows: dataRows, row_count: dataRows.length, col_count: numCols };
+      }
     } else {
       sheets[name] = { rows: allRows, row_count: allRows.length, col_count: numCols };
     }
