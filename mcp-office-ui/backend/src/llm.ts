@@ -161,10 +161,71 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
-    return JSON.stringify(result, null, 2);
+    return truncateToolResult(JSON.stringify(result, null, 2));
   } catch (e) {
     return JSON.stringify({ error: (e as Error).message });
   }
+}
+
+// ── Context-length guards ──────────────────────────────────────────────────────
+
+/**
+ * Max characters for a single tool result (~30K tokens at 4 chars/token).
+ * Leaves ample room in the 131K-token context window for conversation + completion.
+ */
+const TOOL_RESULT_MAX_CHARS = 120_000;
+
+/**
+ * Max total characters across all conversation messages before we start pruning
+ * old tool results (~90K tokens, giving ~40K tokens headroom for completion).
+ */
+const CONVERSATION_MAX_CHARS = 360_000;
+
+/** Truncate a tool result that is too large, appending a hint to use selective params. */
+function truncateToolResult(result: string): string {
+  if (result.length <= TOOL_RESULT_MAX_CHARS) return result;
+  const truncated = result.slice(0, TOOL_RESULT_MAX_CHARS);
+  // Try to end at a clean JSON boundary
+  const lastNewline = truncated.lastIndexOf("\n");
+  const safe = lastNewline > TOOL_RESULT_MAX_CHARS * 0.9 ? truncated.slice(0, lastNewline) : truncated;
+  return (
+    safe +
+    "\n\n[RESULT TRUNCATED — the output exceeded the context limit. " +
+    "Use selective parameters to reduce the payload: " +
+    "outline_only/sections (Word), pages (PDF), slides (PowerPoint), " +
+    "sheets/start_row/end_row/columns/max_rows (Excel).]"
+  );
+}
+
+/** Rough character-count estimate of all message content. */
+function estimateSize(messages: ChatCompletionMessageParam[]): number {
+  return messages.reduce((total, msg) => {
+    if (typeof msg.content === "string") return total + msg.content.length;
+    if (Array.isArray(msg.content)) {
+      return total + (msg.content as { text?: string }[]).reduce((s, c) => s + (c.text?.length ?? 0), 0);
+    }
+    return total;
+  }, 0);
+}
+
+/**
+ * When the accumulated conversation exceeds CONVERSATION_MAX_CHARS,
+ * replace the content of the oldest tool-result messages with a short stub,
+ * keeping at least the 4 most recent messages intact.
+ */
+function pruneConversation(messages: ChatCompletionMessageParam[]): ChatCompletionMessageParam[] {
+  if (estimateSize(messages) <= CONVERSATION_MAX_CHARS) return messages;
+
+  const result = messages.map((m) => ({ ...m }));
+  // Leave system message (index 0) and the last 4 messages alone
+  for (let i = 1; i < result.length - 4; i++) {
+    if (estimateSize(result) <= CONVERSATION_MAX_CHARS) break;
+    const msg = result[i];
+    if (msg.role === "tool" && typeof msg.content === "string" && msg.content.length > 200) {
+      result[i] = { ...msg, content: "[Tool result omitted from context to stay within token limit]" };
+    }
+  }
+  return result;
 }
 
 export interface StreamEvent {
@@ -188,7 +249,7 @@ export async function chatWithLLM(
   while (true) {
     const stream = await client.chat.completions.create({
       model,
-      messages: conversationMessages,
+      messages: pruneConversation(conversationMessages),
       tools: TOOL_DEFINITIONS,
       tool_choice: "auto",
       stream: true,
