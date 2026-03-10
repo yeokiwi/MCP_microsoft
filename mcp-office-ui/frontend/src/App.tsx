@@ -140,6 +140,9 @@ export default function App() {
           <button className="btn btn-ghost" onClick={clearChat} title="Clear chat">
             🗑 Clear
           </button>
+          <button className="btn btn-ghost" onClick={() => window.print()} title="Print conversation to PDF">
+            🖨 Print
+          </button>
         </div>
       </header>
 

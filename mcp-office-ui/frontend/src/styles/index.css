@@ -669,3 +669,85 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Print / Save-as-PDF ─────────────────────────────────────────────────────── */
+@media print {
+  /* Force light colours for readability on paper */
+  :root {
+    --bg: #ffffff;
+    --bg-2: #ffffff;
+    --bg-3: #f5f5f5;
+    --bg-4: #e0e0e0;
+    --border: #cccccc;
+    --text: #111111;
+    --text-muted: #555555;
+    --user-bg: #dce8ff;
+    --user-text: #111111;
+    --assistant-bg: #ffffff;
+    --tool-bg: #f5f5f5;
+    --tool-border: #cccccc;
+    --accent: #1d4ed8;
+  }
+
+  /* Hide everything except the conversation */
+  .topbar,
+  .sidebar,
+  .input-area,
+  .suggestions,
+  .btn-stop { display: none !important; }
+
+  /* Remove overflow constraints so the full conversation renders */
+  html, body, #root { height: auto; overflow: visible; }
+  body { overflow: visible; background: #fff; }
+  .app-root { height: auto; }
+  .app-body { display: block; overflow: visible; }
+  .chat-main { display: block; overflow: visible; }
+  .messages-container { overflow: visible; padding: 0; }
+
+  /* Page header showing the app title */
+  .messages-container::before {
+    content: "MCP Office Reader — Conversation";
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #111;
+  }
+
+  /* Lay out messages full-width */
+  .message-wrapper {
+    max-width: 100%;
+    padding: 8px 0;
+    page-break-inside: avoid;
+  }
+
+  /* Distinguish user vs. assistant bubbles */
+  .bubble-user {
+    background: var(--user-bg);
+    color: var(--user-text);
+    border: 1px solid #a0b4e0;
+  }
+  .bubble-assistant {
+    background: #fff;
+    border: 1px solid #cccccc;
+  }
+
+  /* Show tool cards fully expanded */
+  .tool-card-body { display: flex !important; }
+  .tool-chevron { display: none; }
+
+  /* Remove scroll limits on code blocks */
+  .tool-code { max-height: none; overflow: visible; }
+  .markdown-body pre { overflow: visible; white-space: pre-wrap; }
+
+  /* Prevent links from printing their URLs */
+  .markdown-body a::after { content: ""; }
+
+  /* Hide streaming cursors and animations */
+  .cursor-blink, .thinking-dots { display: none; }
+
+  /* Timestamp subtle */
+  .message-time { font-size: 10px; color: #888; }
+}
