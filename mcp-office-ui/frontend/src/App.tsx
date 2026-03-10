@@ -11,6 +11,7 @@ interface ModelOption {
 export default function App() {
   const [models, setModels] = useState<ModelOption[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
+  const [modelsLoading, setModelsLoading] = useState(true);
   const { messages, isLoading, sendMessage, stopGeneration, clearChat } = useChat(selectedModel);
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,7 +31,8 @@ export default function App() {
       .catch(() => {
         setModels([{ value: "gpt-4o", label: "gpt-4o" }]);
         setSelectedModel("gpt-4o");
-      });
+      })
+      .finally(() => setModelsLoading(false));
   }, []);
 
   // Auto-scroll on new messages
@@ -107,7 +109,7 @@ export default function App() {
     "Extract text from /path/to/document.pdf",
   ];
 
-  const canSend = (input.trim().length > 0 || selectedPaths.size > 0) && !isLoading;
+  const canSend = (input.trim().length > 0 || selectedPaths.size > 0) && !isLoading && !modelsLoading && selectedModel !== "";
 
   return (
     <div className="app-root">
@@ -124,19 +126,20 @@ export default function App() {
           </h1>
         </div>
         <div className="topbar-right">
-          {models.length > 0 && (
-            <select
-              className="model-selector"
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              disabled={isLoading}
-              title="Select model"
-            >
-              {models.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          )}
+          <select
+            className="model-selector"
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isLoading || modelsLoading}
+            title="Select model"
+          >
+            {modelsLoading
+              ? <option value="">Loading models…</option>
+              : models.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))
+            }
+          </select>
           <button className="btn btn-ghost" onClick={clearChat} title="Clear chat">
             🗑 Clear
           </button>
@@ -218,7 +221,9 @@ export default function App() {
                 onChange={handleInput}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  selectedPaths.size > 0
+                  modelsLoading
+                    ? "Loading models, please wait…"
+                    : selectedPaths.size > 0
                     ? "Ask something about the selected files, or just press Send to summarise…"
                     : "Ask about an Office file or PDF… (Enter to send, Shift+Enter for newline)"
                 }
